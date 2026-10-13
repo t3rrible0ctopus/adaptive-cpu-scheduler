@@ -1,0 +1,49 @@
+{
+  "algorithm": "tabular Q-learning",
+  "training_episodes": 500,
+  "evaluation_seeds_per_workload_load_cell": 30,
+  "training_seed": 42,
+  "evaluation_seed_start": 1000,
+  "baseline_quantum": 3,
+  "decision_overhead_per_decision_accounting_only": 0.0,
+  "actions": [
+    "OLDEST_READY",
+    "SHORTEST_CURRENT_BURST",
+    "HIGHEST_PRIORITY",
+    "LONGEST_WAITING",
+    "SHORTEST_TOTAL_REMAINING",
+    "CONTINUE_LAST_PROCESS"
+  ],
+  "state_features": [
+    "ready queue size bin",
+    "average waiting bin",
+    "maximum waiting bin",
+    "minimum next CPU burst bin",
+    "average next CPU burst bin",
+    "I/O-bound ready fraction bin",
+    "high-priority ready fraction bin",
+    "number of I/O-blocked processes bin",
+    "last process still ready flag"
+  ],
+  "reward": "-number of other ready processes waiting this tick - switch_penalty on PID switch - starvation_penalty per ready process at/above waiting threshold",
+  "switch_penalty": 0.15,
+  "starvation_penalty": 0.75,
+  "starvation_threshold_ticks": 10,
+  "workload_types": [
+    "cpu",
+    "io",
+    "mixed"
+  ],
+  "load_levels": [
+    "light",
+    "medium",
+    "heavy"
+  ],
+  "baselines": [
+    "FCFS",
+    "SJF",
+    "RR",
+    "PRIORITY"
+  ],
+  "note": "One tick per RL action; learned policy is preemptive at tick boundaries. Synthetic workloads only."
+}
