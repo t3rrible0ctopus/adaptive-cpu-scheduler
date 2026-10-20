@@ -28,18 +28,26 @@ class ProcessSpec:
     process_type: str = "cpu"
 
     def validate(self) -> None:
-        if not self.pid:
+        if not isinstance(self.pid, str) or not self.pid:
             raise ValueError("pid must be non-empty")
-        if self.arrival_time < 0:
+        if isinstance(self.arrival_time, bool) or not isinstance(self.arrival_time, int) or self.arrival_time < 0:
             raise ValueError(f"{self.pid}: arrival_time must be >= 0")
-        if not self.cpu_bursts or any(b <= 0 for b in self.cpu_bursts):
+        if (not isinstance(self.cpu_bursts, list) or not self.cpu_bursts
+                or any(isinstance(b, bool) or not isinstance(b, int) or b <= 0
+                       for b in self.cpu_bursts)):
             raise ValueError(f"{self.pid}: cpu_bursts must contain positive integers")
-        if len(self.io_bursts) != len(self.cpu_bursts) - 1:
+        if (not isinstance(self.io_bursts, list)
+                or len(self.io_bursts) != len(self.cpu_bursts) - 1):
             raise ValueError(
                 f"{self.pid}: expected exactly len(cpu_bursts)-1 I/O bursts"
             )
-        if any(b < 0 for b in self.io_bursts):
+        if any(isinstance(b, bool) or not isinstance(b, int) or b < 0
+               for b in self.io_bursts):
             raise ValueError(f"{self.pid}: I/O bursts must be >= 0")
+        if isinstance(self.priority, bool) or not isinstance(self.priority, int):
+            raise ValueError(f"{self.pid}: priority must be an integer")
+        if not isinstance(self.process_type, str) or not self.process_type:
+            raise ValueError(f"{self.pid}: process_type must be a non-empty string")
 
 
 @dataclass

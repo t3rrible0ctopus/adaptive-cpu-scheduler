@@ -9,7 +9,7 @@ A reproducible Python research prototype for comparing classical CPU scheduling 
 - Paired baseline benchmarks using identical workloads per seed.
 - Metrics: waiting, turnaround and response time, throughput, CPU utilization, context switches, maximum waiting time, a documented Jain service-rate fairness proxy, scheduling decision count and accounting-only decision overhead.
 - RL environment with `reset()` / `step()` interface, a discretized observation, six dispatch-heuristic actions, reward shaping for waiting/switching/starvation, and tabular Q-learning.
-- Matched RL evaluation against the four classical policies, paired waiting-time deltas, approximate confidence intervals, CSV exports and plots.
+- Matched RL evaluation against the four classical policies, paired waiting-time deltas, normal-approximation and deterministic paired-bootstrap intervals, CSV exports and plots.
 - Unit tests for baseline algorithms, edge cases, environment transitions and Q-table persistence.
 
 ## Requirements and setup
@@ -46,7 +46,8 @@ For a quick smoke test, use `--seeds 1 --output results_smoke`; smoke-test resul
 
 ```bash
 python run_rl_experiment.py --train-episodes 500 --eval-seeds 30 --seed 42 --eval-seed-start 1000 --output results
-python plot_rl_results.py
+python plot_rl_results.py --aggregate results/rl_evaluation_aggregate.csv --training results/rl_training_log.csv --output results/rl_plots
+python validate_results.py
 ```
 
 The script trains one agent across randomly sampled workload types and load levels, then evaluates it on a separate seed range. Each evaluation workload is run with FCFS, SJF, RR, Priority and Q-learning. It writes:
@@ -83,7 +84,7 @@ The environment penalizes the number of other ready processes that wait during t
 3. **RL action semantics:** the learned policy chooses a dispatch heuristic each tick, not a Linux kernel scheduling class.
 4. **Overhead:** decision overhead is currently accounted for separately; it is not inserted into simulated time and is not wall-clock inference latency.
 5. **Fairness:** Jain's index uses CPU-demand/turnaround as a service-rate proxy. It must be labelled as such and validated before making strong fairness claims.
-6. **Statistical intervals:** paired 95% intervals use a normal approximation; report this limitation and consider a paired bootstrap or t-interval in final analysis.
+6. **Statistical intervals:** paired bootstrap intervals resample the 30 seed-level paired differences for one trained policy. They do not capture training-seed or workload-model uncertainty.
 7. **Tabular state space:** state aggregation is coarse and may still limit generalization. DQN or other function approximation is a possible extension, not part of the current implementation.
 8. **Research target:** the proposed 15% reduction in average waiting time versus Round Robin is a hypothesis, not a guaranteed outcome.
 

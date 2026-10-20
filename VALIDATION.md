@@ -1,6 +1,9 @@
 # Simulator Validation Log — v1.1
 
 ## Validation performed
+- 19 unit tests pass under Python 3.13.9.
+- Reproduced 1,080 matched baseline runs and 1,350 held-out RL evaluation runs from the recorded seeds and settings.
+- `python validate_results.py` checks run counts, aggregate means against per-run CSVs, process time accounting, paired RL seeds/policies, and bootstrap interval validity.
 - FCFS textbook-style completion, waiting, turnaround, and response-time checks.
 - Non-preemptive SJF behavior and shortest-job selection among simultaneously ready jobs.
 - Round Robin with a known quantum-2 schedule.

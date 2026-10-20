@@ -11,6 +11,7 @@ import json
 import math
 import os
 import random
+import zlib
 from collections import defaultdict
 from statistics import mean, stdev
 
@@ -28,6 +29,23 @@ METRICS = (
     "max_waiting_time", "jain_fairness_index_service_rate_proxy", "makespan",
     "scheduling_decisions", "decision_overhead_total",
 )
+
+
+def paired_bootstrap_ci(differences: list[float], seed: int,
+                        resamples: int = 10_000) -> tuple[float, float]:
+    """Deterministic percentile interval for the mean of paired differences."""
+    if not differences:
+        return 0.0, 0.0
+    if len(differences) == 1:
+        return differences[0], differences[0]
+    if resamples <= 0:
+        raise ValueError("resamples must be > 0")
+    rng = random.Random(seed)
+    n = len(differences)
+    means = sorted(mean(rng.choices(differences, k=n)) for _ in range(resamples))
+    low_index = max(0, math.floor(0.025 * resamples))
+    high_index = min(resamples - 1, math.ceil(0.975 * resamples) - 1)
+    return means[low_index], means[high_index]
 
 
 def write_csv(path: str, rows: list[dict]) -> None:
@@ -163,6 +181,9 @@ def aggregate(rows: list[dict], output_dir: str) -> list[dict]:
         mean_delta = mean(deltas)
         sd = stdev(deltas) if len(deltas) > 1 else 0.0
         half_width = 1.96 * sd / math.sqrt(len(deltas)) if deltas else 0.0
+        cell_key = f"{row['workload_type']}:{row['load_level']}".encode("utf-8")
+        bootstrap_seed = zlib.crc32(cell_key) + 1_000_003 * len(deltas)
+        bootstrap_low, bootstrap_high = paired_bootstrap_ci(deltas, bootstrap_seed)
         row["mean_waiting_delta_vs_RR"] = mean_delta
         row["relative_waiting_improvement_vs_RR_pct"] = (
             100.0 * (mean(rr_means) - mean([rl for _, rl, _ in pairs])) / mean(rr_means)
@@ -170,6 +191,8 @@ def aggregate(rows: list[dict], output_dir: str) -> list[dict]:
         )
         row["paired_waiting_delta_95ci_low"] = mean_delta - half_width
         row["paired_waiting_delta_95ci_high"] = mean_delta + half_width
+        row["paired_waiting_delta_bootstrap_95ci_low"] = bootstrap_low
+        row["paired_waiting_delta_bootstrap_95ci_high"] = bootstrap_high
     write_csv(os.path.join(output_dir, "rl_evaluation_aggregate.csv"), aggregates)
     return aggregates
 
@@ -207,6 +230,11 @@ def main():
         "switch_penalty": args.switch_penalty,
         "starvation_penalty": args.starvation_penalty,
         "starvation_threshold_ticks": 10,
+        "paired_waiting_interval": {
+            "method": "paired percentile bootstrap",
+            "resamples": 10000,
+            "seed_rule": "CRC32 of workload:load plus 1000003 times pair count",
+        },
         "workload_types": list(WORKLOAD_TYPES),
         "load_levels": list(LOAD_NAMES),
         "baselines": list(BASELINES),

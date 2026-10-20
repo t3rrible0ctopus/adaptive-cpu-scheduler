@@ -74,6 +74,29 @@ class TestSchedulerSimulator(unittest.TestCase):
         with self.assertRaises(ValueError):
             ProcessSpec("P1", 0, [2, 3], []).validate()
 
+    def test_non_integer_simulation_times_rejected(self):
+        for jobs in (
+            [ProcessSpec("P1", 0.5, [2])],
+            [ProcessSpec("P1", 0, [2.5])],
+            [ProcessSpec("P1", 0, [2, 1], [1.5])],
+            [ProcessSpec("P1", True, [2])],
+        ):
+            with self.subTest(jobs=jobs), self.assertRaises(ValueError):
+                simulate(jobs, "FCFS")
+
+    def test_metrics_reconcile_with_process_accounting(self):
+        result = simulate([
+            ProcessSpec("P1", 0, [2, 1], [3]),
+            ProcessSpec("P2", 1, [4]),
+        ], "FCFS")
+        for process in result.per_process:
+            self.assertEqual(
+                process["turnaround_time"],
+                process["waiting_time"] + process["cpu_time"] + process["io_time"],
+            )
+        self.assertEqual(sum(p["cpu_time"] for p in result.per_process), 7)
+        self.assertAlmostEqual(result.metrics["cpu_utilization"], 7 / result.metrics["makespan"])
+
     def test_duplicate_pids_rejected(self):
         with self.assertRaises(ValueError):
             simulate([ProcessSpec("P1", 0, [1]), ProcessSpec("P1", 1, [1])], "FCFS")

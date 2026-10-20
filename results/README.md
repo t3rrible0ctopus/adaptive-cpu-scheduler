@@ -12,8 +12,9 @@
 - `rl_evaluation_runs.csv`: per-seed metrics for the four baselines and Q-learning.
 - `rl_evaluation_per_process.csv`: per-process metrics for all evaluation policies.
 - `rl_evaluation_timelines.csv`: execution segments for all evaluation policies.
-- `rl_evaluation_aggregate.csv`: aggregate metrics and paired waiting-time comparison statistics.
+- `rl_evaluation_aggregate.csv`: aggregate metrics, paired waiting-time deltas, and paired percentile-bootstrap 95% intervals based on 10,000 deterministic resamples of seed-level differences.
 - `rl_plots/`: RL training and comparison figures.
+- `validate_results.py` (run from the project root) audits run counts, aggregate means, paired policy coverage, process time accounting, and bootstrap interval bounds.
 
 Recreate the baseline outputs with `python benchmark.py --seeds 30 --output results` and `python plot_results.py`. Recreate the RL outputs with `python run_rl_experiment.py --train-episodes 500 --eval-seeds 30 --output results` followed by `python plot_rl_results.py`.
 

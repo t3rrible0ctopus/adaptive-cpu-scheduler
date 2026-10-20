@@ -41,7 +41,7 @@ The stored baseline run uses 30 seeds for each of 3 workload types and 3 load le
 
 ### RL evaluation
 
-`run_rl_experiment.py` defaults to 500 training episodes and 30 evaluation seeds for each of the 9 workload/load cells. Each evaluation workload is run with FCFS, SJF, RR, priority and Q-learning, so the policy comparisons are paired. It exports per-run and aggregate metrics plus paired waiting-time deltas and approximate 95% confidence intervals.
+`run_rl_experiment.py` defaults to 500 training episodes and 30 evaluation seeds for each of the 9 workload/load cells. Each evaluation workload is run with FCFS, SJF, RR, priority and Q-learning, so the policy comparisons are paired. It exports per-run and aggregate metrics plus paired waiting-time deltas, a normal-approximation interval retained for comparison, and a deterministic 10,000-resample paired percentile-bootstrap 95% interval.
 
 ## 5. Metrics
 
@@ -55,19 +55,29 @@ Average waiting, turnaround and response time; throughput; CPU utilization; cont
 4. The action is a dispatch heuristic that selects the next process indirectly, keeping the tabular action space finite.
 5. Decision overhead is currently counted separately and is not added to simulated execution time; it is not measured wall-clock inference latency.
 6. Fairness is reported using a service-rate proxy and maximum waiting time; the proxy needs further justification before a strong fairness claim.
-7. The confidence intervals use a normal 1.96 multiplier on paired differences and are approximate, especially for small evaluation samples.
+7. The bootstrap interval captures seed-to-seed variation for one trained agent on the specified synthetic workload generator; it does not capture training-seed variation, model uncertainty, or real workload variation. Thirty seeds also give limited tail precision.
 8. Tabular Q-learning can struggle with state-space sparsity; a DQN or feature-based policy may be appropriate in a later iteration.
 
 ## 7. Reproducibility
 
-Python 3.10+ is recommended. Install dependencies with `pip install -r requirements.txt`. Run unit tests before experiments. Training seed, evaluation seed range, actions, state features, reward weights and policy parameters are written to the result configuration files. Exact results may change if code or parameters change.
+Python 3.10+ is recommended. Install dependencies with `pip install -r requirements.txt`. Run unit tests before experiments. Training seed, evaluation seed range, actions, state features, reward weights, policy parameters, and interval method are written to the result configuration files. With this code and configuration, the baseline and RL runs were regenerated locally; aggregate metrics matched the means recomputed from the per-run CSVs exactly. Exact output may change if code, dependency versions, or parameters change.
+
+Reproduce the committed outputs and audit their internal consistency with:
+
+```bash
+python benchmark.py --seeds 30 --quantum 3 --output results
+python plot_results.py --input results/aggregate_metrics.csv --output results/plots
+python run_rl_experiment.py --train-episodes 500 --eval-seeds 30 --seed 42 --eval-seed-start 1000 --quantum 3 --overhead 0 --switch-penalty 0.15 --starvation-penalty 0.75 --output results
+python plot_rl_results.py --aggregate results/rl_evaluation_aggregate.csv --training results/rl_training_log.csv --output results/rl_plots
+python validate_results.py
+```
 ## 8. Preliminary measured results
 
 The committed results use 500 Q-learning training episodes and 30 held-out evaluation seeds per workload/load cell. There are 1,350 matched evaluation runs (9 workload/load cells × 30 seeds × 5 policies). Full tables are in `RESULTS_SUMMARY.md` and `results/rl_evaluation_aggregate.csv`.
 
 The learned policy reduced mean waiting time relative to Round Robin in all nine cells, by 5.91%–26.90% (unweighted mean of cell-level percentage reductions: 17.78%). The paper's 15% target was reached in five of nine cells; all three I/O-bound cells and the mixed/light cell were below 15%. Q-learning did not beat the idealized SJF baseline on mean waiting time in any cell. It also had more context switches than Round Robin and a generally lower Jain service-rate fairness proxy. Therefore, the initial results are promising but do not demonstrate that the complete research objective has been met.
 
-The approximate paired 95% intervals for the Q-learning minus Round Robin waiting-time differences are below zero in all nine cells. They use a normal 1.96 multiplier; a stronger final paper should confirm results with a paired t-interval or bootstrap, report effect sizes, and predefine the analysis protocol.
+The paired percentile-bootstrap 95% intervals for the Q-learning minus Round Robin waiting-time differences are below zero in all nine cells. They use 10,000 resamples of paired seed-level differences. The result remains conditional on this single training seed and synthetic workload generator; further work should evaluate multiple training seeds and workload models before making broader claims.
 
 Training reward improved on average between the first and last 50 episodes, from about -4,164.28 to -3,611.45. This is a training diagnostic only; it does not establish convergence.
 
@@ -78,6 +88,6 @@ Training reward improved on average between the first and last 50 episodes, from
 3. Reduce context switches and measure the trade-off against waiting time.
 4. Improve fairness evaluation, including starvation counts and a better-justified Jain index input.
 5. Measure actual Python inference latency and/or model scheduling overhead in simulation time.
-6. Add a paired bootstrap or t-based confidence interval and ablation studies for reward components.
+6. Add ablation studies for reward components and report training-seed variability.
 7. Consider DQN only if the tabular state representation proves insufficient.
 

@@ -2,8 +2,21 @@
 from __future__ import annotations
 import argparse
 import os
+import time
 import pandas as pd
 import matplotlib.pyplot as plt
+
+
+def save_figure(figure, path: str) -> None:
+    """Retry transient Windows file-open failures while replacing plot files."""
+    for attempt in range(4):
+        try:
+            figure.savefig(path, dpi=160)
+            return
+        except OSError as exc:
+            if attempt == 3:
+                raise OSError(f"Could not save plot {path!r} after 4 attempts: {exc}") from exc
+            time.sleep(0.25 * (attempt + 1))
 
 
 def main():
@@ -13,6 +26,7 @@ def main():
     parser.add_argument("--output", default="results/rl_plots")
     args = parser.parse_args()
     os.makedirs(args.output, exist_ok=True)
+    output_dir = os.path.abspath(args.output)
     df = pd.read_csv(args.aggregate)
     metrics = [
         ("average_waiting_time", "Average waiting time (ticks)"),
@@ -32,7 +46,7 @@ def main():
             ax.set_xlabel("Load level")
             ax.set_ylabel(label)
             plt.tight_layout()
-            plt.savefig(os.path.join(args.output, f"{metric}_{workload}.png"), dpi=160)
+            save_figure(plt.gcf(), os.path.join(output_dir, f"{metric}_{workload}.png"))
             plt.close()
     if os.path.exists(args.training):
         training = pd.read_csv(args.training)
@@ -42,9 +56,9 @@ def main():
         ax.set_xlabel("Training episode")
         ax.set_ylabel("Rolling mean episode reward")
         plt.tight_layout()
-        plt.savefig(os.path.join(args.output, "training_reward.png"), dpi=160)
+        save_figure(plt.gcf(), os.path.join(output_dir, "training_reward.png"))
         plt.close()
-    print(f"Saved RL plots to {args.output}")
+    print(f"Saved RL plots to {output_dir}")
 
 
 if __name__ == "__main__":

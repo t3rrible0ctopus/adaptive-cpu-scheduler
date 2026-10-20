@@ -27,6 +27,8 @@ class QLearningAgent:
         return self.q[state]
 
     def choose_action(self, state: tuple, epsilon: float = 0.0) -> int:
+        if not isinstance(epsilon, (int, float)) or isinstance(epsilon, bool) or not 0 <= epsilon <= 1:
+            raise ValueError("epsilon must be a number in [0, 1]")
         if self.rng.random() < epsilon:
             return self.rng.randrange(N_ACTIONS)
         # Do not create Q-table entries during evaluation for unseen states.
@@ -39,6 +41,8 @@ class QLearningAgent:
 
     def update(self, state: tuple, action: int, reward: float,
                next_state: tuple, done: bool) -> None:
+        if isinstance(action, bool) or not isinstance(action, int) or not 0 <= action < N_ACTIONS:
+            raise ValueError(f"action must be an integer from 0 to {N_ACTIONS - 1}")
         q_values = self.values(state)
         target = reward if done else reward + self.gamma * max(self.values(next_state))
         q_values[action] += self.alpha * (target - q_values[action])

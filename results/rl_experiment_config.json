@@ -29,6 +29,11 @@
   "switch_penalty": 0.15,
   "starvation_penalty": 0.75,
   "starvation_threshold_ticks": 10,
+  "paired_waiting_interval": {
+    "method": "paired percentile bootstrap",
+    "resamples": 10000,
+    "seed_rule": "CRC32 of workload:load plus 1000003 times pair count"
+  },
   "workload_types": [
     "cpu",
     "io",
